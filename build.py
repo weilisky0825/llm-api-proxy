@@ -10,8 +10,8 @@ def build():
     proj_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(proj_dir)
 
-    # Clean previous build
-    for d in ["build", "dist", "__pycache__"]:
+    # Clean previous build artifacts (keep dist/ for multi-platform)
+    for d in ["build", "__pycache__"]:
         path = os.path.join(proj_dir, d)
         if os.path.exists(path):
             shutil.rmtree(path)
