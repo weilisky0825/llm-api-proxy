@@ -1,0 +1,164 @@
+{% extends "layout.html" %}
+{% block content %}
+<div x-data="configPage()" x-init="init()">
+    <!-- Provider Management -->
+    <div class="bg-gray-800 rounded-lg p-4 mb-4">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold">Provider 列表</h3>
+            <button @click="addProvider()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium transition-colors">+ 添加 Provider</button>
+        </div>
+
+        <template x-for="(p, idx) in providers" :key="idx">
+            <div class="bg-gray-750 border border-gray-700 rounded-lg p-3 mb-3">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs text-gray-400">#<span x-text="idx + 1"></span></span>
+                    <button @click="removeProvider(idx)" class="ml-auto text-red-400 hover:text-red-300 text-xs">删除</button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-xs text-gray-400">名称</label>
+                        <input type="text" x-model="p.name" placeholder="dashscope" class="w-full mt-0.5 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400">类型</label>
+                        <select x-model="p.provider" class="w-full mt-0.5 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm">
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400">Base URL</label>
+                        <input type="text" x-model="p.base_url" placeholder="https://api.openai.com" class="w-full mt-0.5 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400">API Key</label>
+                        <input type="password" x-model="p.api_key" placeholder="sk-..." class="w-full mt-0.5 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400">超时（秒）</label>
+                        <input type="number" x-model.number="p.timeout" placeholder="120" class="w-full mt-0.5 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400">模型（逗号分隔）</label>
+                        <input type="text" x-model="p._models_str" placeholder="gpt-4, gpt-3.5" class="w-full mt-0.5 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm">
+                    </div>
+                    <div class="flex items-center gap-3 col-span-2">
+                        <label class="flex items-center gap-1 text-xs">
+                            <input type="checkbox" x-model="p.default" class="rounded">
+                            <span class="text-gray-400">默认 Provider</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Other YAML Settings -->
+    <div class="bg-gray-800 rounded-lg p-4 mb-4">
+        <p class="text-sm text-gray-400 mb-2">其他配置（server / database / logging）：</p>
+        <textarea x-model="yamlOther" class="w-full h-64 bg-gray-900 text-green-400 font-mono text-sm p-4 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none" spellcheck="false"></textarea>
+    </div>
+
+    <div class="flex gap-3">
+        <button @click="save()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors">保存配置</button>
+        <span x-show="msg" x-text="msg" class="text-sm py-2" :class="msgOk ? 'text-green-400' : 'text-red-400'"></span>
+    </div>
+
+    <!-- Change Password Section -->
+    <div class="bg-gray-800 rounded-lg p-4 mt-6">
+        <h3 class="text-sm font-semibold mb-3">修改管理员密码</h3>
+        <div x-data="changePassword()" class="space-y-2">
+            <div class="flex gap-3 items-end">
+                <div class="flex-1">
+                    <label class="text-xs text-gray-400">旧密码</label>
+                    <input type="password" x-model="oldPassword" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
+                </div>
+                <div class="flex-1">
+                    <label class="text-xs text-gray-400">新密码</label>
+                    <input type="password" x-model="newPassword" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
+                </div>
+                <button @click="submit()" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded text-sm font-medium">修改密码</button>
+            </div>
+            <div x-show="msg" x-cloak class="text-sm" :class="ok ? 'text-green-400' : 'text-red-400'" x-text="msg"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function configPage() {
+    return {
+        providers: [],
+        yamlOther: '',
+        msg: '',
+        msgOk: true,
+        async init() {
+            const res = await fetch('/api/admin/config');
+            const data = await res.json();
+            this.providers = (data.providers || []).map(p => ({
+                ...p,
+                _models_str: (p.models || []).join(', '),
+            }));
+            this.yamlOther = data.yaml_other || '';
+        },
+        addProvider() {
+            this.providers.push({
+                name: 'provider-' + (this.providers.length + 1),
+                provider: 'openai',
+                api_key: '',
+                base_url: 'https://api.openai.com',
+                timeout: 120,
+                _models_str: '',
+                models: [],
+                default: this.providers.length === 0,
+            });
+        },
+        removeProvider(idx) {
+            this.providers.splice(idx, 1);
+        },
+        async save() {
+            this.msg = '保存中...';
+            const providersToSend = this.providers.map(p => ({
+                name: p.name,
+                provider: p.provider,
+                api_key: p.api_key,
+                base_url: p.base_url,
+                timeout: p.timeout || 120,
+                models: p._models_str.split(',').map(s => s.trim()).filter(Boolean),
+                default: p.default,
+            }));
+            const res = await fetch('/api/admin/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ providers: providersToSend, yaml_other: this.yamlOther }),
+            });
+            const data = await res.json();
+            if (res.ok) { this.msg = data.message; this.msgOk = true; }
+            else { this.msg = data.detail || '保存失败'; this.msgOk = false; }
+        },
+    };
+}
+function changePassword() {
+    return {
+        oldPassword: '', newPassword: '', msg: '', ok: false,
+        async submit() {
+            this.msg = '';
+            const res = await fetch('/api/admin/admin/password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({old_password: this.oldPassword, new_password: this.newPassword}),
+            });
+            const data = await res.json();
+            if (data.ok) {
+                this.ok = true;
+                this.msg = '密码修改成功';
+                this.oldPassword = '';
+                this.newPassword = '';
+            } else {
+                this.ok = false;
+                this.msg = data.error || '修改失败';
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

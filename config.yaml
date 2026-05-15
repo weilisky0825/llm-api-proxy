@@ -1,0 +1,25 @@
+database:
+  driver: sqlite
+  mysql:
+    url: ''
+  postgresql:
+    url: ''
+  sqlite:
+    path: ./data/proxy.db
+logging:
+  level: INFO
+server:
+  host: 0.0.0.0
+  port: 8000
+  workers: 1
+upstream:
+  providers:
+  - api_key: sk-xxxx
+    base_url: https://api.openai.com/v1
+    default: true
+    models:
+    - gpt-4o
+    - gpt-4o-mini
+    name: openai
+    provider: openai
+    timeout: 120

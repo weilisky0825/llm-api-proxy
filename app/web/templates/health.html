@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+{% block content %}
+<div x-data="healthCheck()" x-init="init()">
+    <div class="space-y-4">
+        <!-- Upstream -->
+        <div class="bg-gray-800 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-semibold">上游 API</h3>
+                <span class="px-2 py-1 rounded text-sm"
+                      :class="data.upstream?.ok ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'"
+                      x-text="data.upstream?.ok ? '正常' : '异常'"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div><span class="text-gray-400">提供商:</span> <span x-text="data.config?.provider"></span></div>
+                <div><span class="text-gray-400">延迟:</span> <span x-text="data.upstream?.latency_ms + 'ms'"></span></div>
+                <div><span class="text-gray-400">Base URL:</span> <span class="font-mono text-xs" x-text="data.config?.base_url"></span></div>
+                <div><span class="text-gray-400">API Key:</span> <span x-text="data.config?.has_api_key ? '已配置' : '未配置'"></span></div>
+            </div>
+            <div x-show="data.upstream?.message && !data.upstream?.ok" class="mt-2 text-xs font-mono text-red-400" x-text="data.upstream?.message"></div>
+        </div>
+
+        <!-- Database -->
+        <div class="bg-gray-800 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-semibold">数据库</h3>
+                <span class="px-2 py-1 rounded text-sm"
+                      :class="data.database?.ok ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'"
+                      x-text="data.database?.ok ? '正常' : '异常'"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div><span class="text-gray-400">驱动:</span> <span x-text="data.database?.driver"></span></div>
+                <div><span class="text-gray-400">延迟:</span> <span x-text="data.database?.latency_ms + 'ms'"></span></div>
+                <div><span class="text-gray-400">日志总数:</span> <span x-text="data.database?.total_logs ?? '—'"></span></div>
+            </div>
+            <div x-show="data.database?.message" class="mt-2 text-xs font-mono text-red-400" x-text="data.database?.message"></div>
+        </div>
+    </div>
+
+    <button @click="init()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium">刷新状态</button>
+</div>
+
+<script>
+function healthCheck() {
+    return {
+        data: {},
+        async init() {
+            const res = await fetch('/api/admin/health');
+            this.data = await res.json();
+        }
+    };
+}
+</script>
+{% endblock %}

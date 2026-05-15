@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+{% block content %}
+<div x-data="apiTest()">
+    <div class="grid grid-cols-3 gap-4 mb-4">
+        <div class="bg-gray-800 rounded-lg p-4">
+            <label class="text-sm text-gray-400">API 格式</label>
+            <select x-model="format" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
+                <option value="openai">OpenAI (chat/completions)</option>
+                <option value="anthropic">Anthropic (messages)</option>
+            </select>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4">
+            <label class="text-sm text-gray-400">模型</label>
+            <input type="text" x-model="model" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm" placeholder="glm-5" value="glm-5">
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4">
+            <label class="text-sm text-gray-400">Max Tokens</label>
+            <input type="number" x-model="maxTokens" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm" value="1000">
+        </div>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-4 mb-4">
+        <label class="text-sm text-gray-400">内容</label>
+        <textarea x-model="content" rows="4" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm font-mono" placeholder="Hello"></textarea>
+    </div>
+    <button @click="send()" :disabled="loading"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium disabled:opacity-50">
+        <span x-show="!loading">发送请求</span>
+        <span x-show="loading">发送中...</span>
+    </button>
+    <div x-show="result" class="mt-4 bg-gray-800 rounded-lg p-4">
+        <div class="flex gap-4 text-sm text-gray-400 mb-3">
+            <span>状态: <span x-text="result.status" :class="result.status === 200 ? 'text-green-400' : 'text-red-400'"></span></span>
+            <span>耗时: <span x-text="result.elapsed_ms + 'ms'"></span></span>
+        </div>
+        <pre class="bg-gray-900 p-4 rounded text-xs font-mono overflow-x-auto whitespace-pre-wrap" x-text="JSON.stringify(result.response, null, 2)"></pre>
+    </div>
+</div>
+
+<script>
+function apiTest() {
+    return {
+        format: 'openai', model: 'glm-5', maxTokens: 1000, content: 'Hello',
+        loading: false, result: null,
+        async send() {
+            this.loading = true;
+            this.result = null;
+            try {
+                const res = await fetch('/api/admin/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        format: this.format, model: this.model, content: this.content,
+                        max_tokens: parseInt(this.maxTokens)
+                    })
+                });
+                this.result = await res.json();
+            } catch (e) {
+                this.result = { status: 'error', elapsed_ms: 0, response: { error: e.message } };
+            }
+            this.loading = false;
+        }
+    };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends "layout.html" %}
+{% block content %}
+<div x-data="userManager()" x-init="init()">
+    <!-- Add User Button -->
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">用户列表</h3>
+        <button @click="showCreate = true; form = {name: '', rate_limit: 60, daily_quota: 10000}"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium">添加用户</button>
+    </div>
+
+    <!-- User Table -->
+    <div class="bg-gray-800 rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-gray-400 border-b border-gray-700">
+                    <th class="py-3 px-4 text-left">名称</th>
+                    <th class="py-3 px-4 text-left">API Key</th>
+                    <th class="py-3 px-4 text-center">状态</th>
+                    <th class="py-3 px-4 text-center">速率</th>
+                    <th class="py-3 px-4 text-left">配额使用</th>
+                    <th class="py-3 px-4 text-center">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="u in users" :key="u.id">
+                    <tr class="border-b border-gray-700/50 hover:bg-gray-700/30">
+                        <td class="py-3 px-4 font-medium" x-text="u.name"></td>
+                        <td class="py-3 px-4 font-mono text-xs text-gray-400" x-text="u.masked_key"></td>
+                        <td class="py-3 px-4 text-center">
+                            <button @click="toggleUser(u)"
+                                    class="px-2 py-1 rounded text-xs"
+                                    :class="u.enabled ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'"
+                                    x-text="u.enabled ? '启用' : '禁用'"></button>
+                        </td>
+                        <td class="py-3 px-4 text-center font-mono text-xs" x-text="u.rate_limit + '/min'"></td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 bg-gray-900 rounded-full h-2 overflow-hidden">
+                                    <div class="h-full rounded-full transition-all"
+                                         :class="u.quota_over ? 'bg-red-500' : 'bg-green-500'"
+                                         :style="'width: ' + Math.min(u.quota_pct, 100) + '%'"></div>
+                                </div>
+                                <span class="text-xs text-gray-400 font-mono whitespace-nowrap"
+                                      x-text="u.daily_quota > 0 ? u.used_tokens + '/' + u.daily_quota : '不限'"></span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <div class="flex gap-1 justify-center">
+                                <button @click="resetKey(u)" class="text-blue-400 hover:text-blue-300 text-xs">重置Key</button>
+                                <button @click="resetQuota(u)" class="text-yellow-400 hover:text-yellow-300 text-xs">重置配额</button>
+                                <button @click="editUser(u)" class="text-gray-400 hover:text-gray-300 text-xs">编辑</button>
+                                <button @click="deleteUser(u)" class="text-red-400 hover:text-red-300 text-xs">删除</button>
+                            </div>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+        <div x-show="users.length === 0" class="py-8 text-center text-gray-500">暂无用户</div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div x-show="showCreate || showEdit" x-cloak class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click.self="showCreate = false; showEdit = false">
+        <div class="bg-gray-800 rounded-lg p-6 w-[450px]">
+            <h3 class="text-lg font-bold mb-4" x-text="showCreate ? '添加用户' : '编辑用户'"></h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-gray-400">名称</label>
+                    <input type="text" x-model="form.name" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
+                </div>
+                <div x-show="showCreate">
+                    <label class="text-xs text-gray-400">速率限制（次/分钟）</label>
+                    <input type="number" x-model.number="form.rate_limit" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
+                </div>
+                <div x-show="showCreate">
+                    <label class="text-xs text-gray-400">每日 Token 配额（0=不限）</label>
+                    <input type="number" x-model.number="form.daily_quota" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
+                </div>
+                <div x-show="showEdit">
+                    <label class="text-xs text-gray-400">速率限制（次/分钟）</label>
+                    <input type="number" x-model.number="form.rate_limit" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
+                </div>
+                <div x-show="showEdit">
+                    <label class="text-xs text-gray-400">每日 Token 配额（0=不限）</label>
+                    <input type="number" x-model.number="form.daily_quota" class="w-full mt-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
+                </div>
+                <div x-show="showEdit">
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" x-model="form.enabled" class="rounded">
+                        启用
+                    </label>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+                <button @click="showCreate = false; showEdit = false" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">取消</button>
+                <button @click="saveUser()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Key Modal -->
+    <div x-show="showKey" x-cloak class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click.self="showKey = false">
+        <div class="bg-gray-800 rounded-lg p-6 w-[500px]">
+            <h3 class="text-lg font-bold mb-2">新 API Key</h3>
+            <p class="text-xs text-gray-400 mb-3">请妥善保存，关闭后将无法再次查看完整 Key。</p>
+            <div class="bg-gray-900 rounded p-3 font-mono text-sm select-all" x-text="newKey"></div>
+            <div class="flex justify-end gap-2 mt-4">
+                <button @click="copyKey()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">复制</button>
+                <button @click="showKey = false" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function userManager() {
+    return {
+        users: [],
+        showCreate: false, showEdit: false, showKey: false,
+        form: { name: '', rate_limit: 60, daily_quota: 10000, enabled: true },
+        newKey: '', editingId: null,
+        async init() { await this.loadUsers(); },
+        async loadUsers() {
+            const res = await fetch('/api/admin/users');
+            const data = await res.json();
+            this.users = data.users;
+        },
+        async saveUser() {
+            if (this.showCreate) {
+                const res = await fetch('/api/admin/users', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(this.form),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    this.newKey = data.api_key;
+                    this.showCreate = false;
+                    this.showKey = true;
+                    await this.loadUsers();
+                }
+            } else if (this.showEdit) {
+                await fetch(`/api/admin/users/${this.editingId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(this.form),
+                });
+                this.showEdit = false;
+                await this.loadUsers();
+            }
+        },
+        async toggleUser(u) {
+            await fetch(`/api/admin/users/${u.id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({...u, enabled: u.enabled ? 0 : 1}),
+            });
+            await this.loadUsers();
+        },
+        async resetKey(u) {
+            const res = await fetch(`/api/admin/users/${u.id}/reset-key`, {method: 'POST'});
+            const data = await res.json();
+            if (data.ok) {
+                this.newKey = data.api_key;
+                this.showKey = true;
+            }
+        },
+        async resetQuota(u) {
+            await fetch(`/api/admin/users/${u.id}/reset-quota`, {method: 'POST'});
+            await this.loadUsers();
+        },
+        async deleteUser(u) {
+            if (!confirm(`确定删除用户 "${u.name}"？`)) return;
+            await fetch(`/api/admin/users/${u.id}`, {method: 'DELETE'});
+            await this.loadUsers();
+        },
+        editUser(u) {
+            this.form = {name: u.name, rate_limit: u.rate_limit, daily_quota: u.daily_quota, enabled: !!u.enabled};
+            this.editingId = u.id;
+            this.showEdit = true;
+        },
+        async copyKey() {
+            await navigator.clipboard.writeText(this.newKey);
+        }
+    };
+}
+</script>
+{% endblock %}

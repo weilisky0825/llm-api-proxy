@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+{% block content %}
+<div x-data="liveLogs()" x-init="start()">
+    <div class="flex items-center gap-3 mb-4">
+        <span class="text-sm text-gray-400">实时显示最近的请求</span>
+        <span class="flex items-center gap-1 text-sm" :class="running ? 'text-green-400' : 'text-red-400'">
+            <span class="w-2 h-2 rounded-full" :class="running ? 'bg-green-400 animate-pulse' : 'bg-red-400'"></span>
+            <span x-text="running ? '监听中' : '已停止'"></span>
+        </span>
+        <button @click="clear()" class="text-xs text-gray-400 hover:text-white ml-4">清空</button>
+    </div>
+    <div class="bg-gray-800 rounded-lg p-4 max-h-[600px] overflow-y-auto font-mono text-xs space-y-1">
+        <template x-for="log in logs" :key="log.request_id">
+            <div class="flex items-center gap-3 py-1 border-b border-gray-700/30">
+                <span class="text-gray-500 w-24" x-text="log.timestamp"></span>
+                <span class="text-gray-400 truncate max-w-[100px]" x-text="log.user_name || '—'" :title="log.user_name"></span>
+                <span class="text-gray-500 w-28 font-mono text-[10px]" x-text="log.client_ip || '—'"></span>
+                <span class="px-1.5 py-0.5 rounded text-xs" :class="log.status_code === 200 ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'" x-text="log.status_code || '...'"></span>
+                <span class="text-blue-400 w-20" x-text="log.request_api"></span>
+                <span class="text-yellow-300 truncate max-w-[150px]" x-text="log.request_model || ''"></span>
+                <span class="text-green-400 truncate max-w-[120px] text-[10px]" x-text="log.provider_name || ''"></span>
+                <span class="text-gray-500" x-text="log.response_time_ms ? log.response_time_ms + 'ms' : ''"></span>
+            </div>
+        </template>
+        <div x-show="logs.length === 0" class="py-8 text-center text-gray-500">等待请求...</div>
+    </div>
+</div>
+
+<script>
+function liveLogs() {
+    return {
+        logs: [], running: false, source: null,
+        start() {
+            this.running = true;
+            this.source = new EventSource('/api/admin/logs/live');
+            this.source.onmessage = (e) => {
+                const log = JSON.parse(e.data);
+                this.logs.unshift(log);
+                if (this.logs.length > 100) this.logs.pop();
+            };
+            this.source.onerror = () => { this.running = false; this.source.close(); };
+        },
+        clear() { this.logs = []; }
+    };
+}
+</script>
+{% endblock %}

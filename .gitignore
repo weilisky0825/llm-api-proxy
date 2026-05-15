@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Database
+data/
+*.db
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Testing / scratch
+cookies*.txt
+raw_resp.json
+content_test.txt
+
+# PyInstaller
+*.spec
+
+# Environment
+.env

@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+{% block content %}
+<div x-data="dashboard()" x-init="init()">
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-800 rounded-lg p-4">
+            <div class="text-sm text-gray-400">今日请求</div>
+            <div class="text-3xl font-bold mt-1" x-text="data.today_total">—</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4">
+            <div class="text-sm text-gray-400">成功率</div>
+            <div class="text-3xl font-bold mt-1" x-text="data.today_success_rate + '%'">—</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4">
+            <div class="text-sm text-gray-400">今日 Token 用量</div>
+            <div class="text-3xl font-bold mt-1" x-text="data.today_tokens.toLocaleString()">—</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4">
+            <div class="text-sm text-gray-400">平均响应时间</div>
+            <div class="text-3xl font-bold mt-1" x-text="data.today_avg_ms + 'ms'">—</div>
+        </div>
+    </div>
+
+    <!-- Recent Requests -->
+    <div class="bg-gray-800 rounded-lg p-4">
+        <h3 class="text-lg font-semibold mb-4">最近请求</h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-gray-400 border-b border-gray-700">
+                        <th class="pb-2 text-left">时间</th>
+                        <th class="pb-2 text-left">API</th>
+                        <th class="pb-2 text-left">模型</th>
+                        <th class="pb-2 text-left">路径</th>
+                        <th class="pb-2 text-left">状态</th>
+                        <th class="pb-2 text-left">耗时</th>
+                        <th class="pb-2 text-left">Token</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="r in data.recent" :key="r.request_id">
+                        <tr class="border-b border-gray-700/50 hover:bg-gray-700/30">
+                            <td class="py-2 font-mono text-xs" x-text="r.timestamp"></td>
+                            <td class="py-2" x-text="r.request_api"></td>
+                            <td class="py-2 font-mono text-xs" x-text="r.request_model || '—'"></td>
+                            <td class="py-2 font-mono text-xs" x-text="r.request_path"></td>
+                            <td class="py-2">
+                                <span class="px-2 py-0.5 rounded text-xs"
+                                      :class="r.status_code === 200 ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'"
+                                      x-text="r.status_code || '—'"></span>
+                            </td>
+                            <td class="py-2 font-mono" x-text="r.response_time_ms ? r.response_time_ms + 'ms' : '—'"></td>
+                            <td class="py-2 font-mono" x-text="r.total_tokens || '—'"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+            <div x-show="data.recent.length === 0" class="py-8 text-center text-gray-500">
+                暂无请求记录
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function dashboard() {
+    return {
+        data: { today_total: 0, today_success: 0, today_tokens: 0, today_avg_ms: 0, today_success_rate: 0, recent: [] },
+        async init() {
+            try {
+                const res = await fetch('/api/admin/dashboard');
+                const d = await res.json();
+                this.data = d;
+                if (d.today_total > 0) {
+                    this.data.today_success_rate = Math.round((d.today_success / d.today_total) * 100);
+                }
+            } catch (e) {
+                console.error('Failed to load dashboard:', e);
+            }
+        }
+    };
+}
+</script>
+{% endblock %}
