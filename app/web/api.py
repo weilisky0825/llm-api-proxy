@@ -18,8 +18,6 @@ from app.proxy.forwarder import forwarder
 
 router = APIRouter(prefix="/api/admin")
 
-CONFIG_PATH = Path(__file__).parent.parent.parent / "config.yaml"
-
 
 def get_store() -> SQLiteStore:
     return SQLiteStore(settings.database.sqlite.path)

@@ -5,7 +5,7 @@ from typing import Any, AsyncGenerator
 
 import httpx
 
-from app.config import ProviderConfig, UpstreamConfig, settings
+from app.config import ProviderConfig, UpstreamConfig
 
 
 class ProviderClient:
@@ -51,8 +51,10 @@ class ProviderClient:
 class ProviderRouter:
     def __init__(self):
         self._clients: dict[str, ProviderClient] = {}
+        self._upstream: UpstreamConfig = UpstreamConfig()
 
     def initialize(self, upstream_config: UpstreamConfig):
+        self._upstream = upstream_config
         self._clients.clear()
 
         if not upstream_config.providers:
@@ -67,7 +69,7 @@ class ProviderRouter:
                 self._clients[p.name] = ProviderClient(p)
 
     def get_client(self, model: str) -> ProviderClient:
-        provider = settings.upstream.get_provider_for_model(model)
+        provider = self._upstream.get_provider_for_model(model)
         return self._clients[provider.name]
 
     async def send(
