@@ -2,6 +2,8 @@
 
 大模型 API 访问代理（中转站）。接收客户端的 OpenAI 或 Anthropic 格式请求，按模型名自动路由到多个上游提供商，支持用户管理与配额审计。
 
+**注意**： 本项目基于Claude Code + qwen3.6-plus构建，功能并未完全验证，仅供个人参考使用。
+
 ## 功能
 
 - **多 Provider 路由** — 配置多个上游提供商（OpenAI/Anthropic 格式），按模型名自动路由
@@ -14,6 +16,8 @@
 - **管理后台** — 仪表盘、配置管理（Provider 卡片 + YAML 编辑器）、实时日志、日志查询、API 测试、健康检查、统计
 
 ## 快速开始
+
+**<span style="color:red">说明</span>**： <span style="color:red">可在[windows目录](./windows/)下直接下载可执行文件使用。</span>
 
 ### 1. 安装依赖
 
