@@ -83,10 +83,10 @@ async def save_config(payload: dict):
         # Write
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             yaml.dump(other, f, default_flow_style=False, allow_unicode=True)
-        # Hot-reload router
-        from app.config import load_config
+        # Hot-reload - update global settings AND reinitialize router
+        from app.config import reload_settings
         from app.proxy.forwarder import router
-        new_settings = load_config()
+        new_settings = reload_settings()
         router.initialize(new_settings.upstream)
         return {"ok": True, "message": "Config saved and providers reloaded."}
     except Exception as e:

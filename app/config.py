@@ -167,3 +167,10 @@ def load_config() -> AppConfig:
 
 
 settings = load_config()
+
+
+def reload_settings() -> AppConfig:
+    """Reload settings from config file and return new settings."""
+    global settings
+    settings = load_config()
+    return settings

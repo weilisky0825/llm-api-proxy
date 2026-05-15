@@ -1,11 +1,8 @@
 from __future__ import annotations
-
 import json
 import time
-
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
-
 from app.config import settings
 from app.logging.middleware import get_middleware
 from app.proxy.converter import (
@@ -14,24 +11,18 @@ from app.proxy.converter import (
     convert_openai_stream,
 )
 from app.proxy.forwarder import router as provider_router
-
 router = APIRouter()
-
-
 @router.post("/v1/messages")
 async def messages(request: Request):
     body = await request.json()
     model = body.get("model", "")
     mw = get_middleware()
-
     start = time.time()
     is_stream = body.get("stream", False)
     provider_config = settings.upstream.get_provider_for_model(model)
-
     # Build upstream URL for logging
     upstream_path = "/messages" if provider_config.provider == "anthropic" else "/chat/completions"
     upstream_url = f"{provider_config.base_url}{upstream_path}"
-
     request_id = await mw.on_request(
         {
             "path": "/v1/messages",
@@ -53,7 +44,6 @@ async def messages(request: Request):
         user_id=getattr(request.state, "user_id", None),
         user_name=getattr(request.state, "user_name", ""),
     )
-
     if provider_config.provider == "openai":
         upstream_body = anthropic_to_openai(body)
         if is_stream:
@@ -81,7 +71,6 @@ async def messages(request: Request):
                 headers={"X-Request-ID": request_id},
             )
         status, resp_headers, resp_body = await provider_router.send(model, "/messages", body)
-
     elapsed = int((time.time() - start) * 1000)
     usage = None
     if isinstance(resp_body, dict):
@@ -93,7 +82,6 @@ async def messages(request: Request):
                 "total_tokens": resp_usage.get("input_tokens", 0)
                 + resp_usage.get("output_tokens", 0),
             }
-
     await mw.on_response(
         request_id,
         status_code=status,
@@ -101,24 +89,18 @@ async def messages(request: Request):
         response_time_ms=elapsed,
         usage=usage,
     )
-
     # Update user quota/usage
     user_id = getattr(request.state, "user_id", None)
     if user_id:
         from app.auth.user_middleware import update_user_usage
         await update_user_usage(user_id, usage.get("total_tokens", 0) if isinstance(usage, dict) else 0)
-
     return resp_body
-
-
 @router.post("/v1/messages/count_tokens")
 async def count_tokens(request: Request):
     body = await request.json()
     text = body.get("text", "")
     estimated = max(1, len(text) // 4)
     return {"token_count": estimated}
-
-
 @router.get("/v1/models")
 async def list_models():
     status, resp = await provider_router.get_models()

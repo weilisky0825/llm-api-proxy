@@ -84,8 +84,11 @@ class ProviderRouter:
         async with client._client.stream(
             "POST", path, json=body, headers={**client._auth_headers(), **(extra_headers or {})}
         ) as resp:
-            async for chunk in resp.aiter_bytes():
-                yield chunk
+            async for line in resp.aiter_lines():
+                if line:
+                    yield (line + "\n").encode("utf-8")
+                else:
+                    yield b"\n"
 
     async def close_all(self):
         for c in self._clients.values():
